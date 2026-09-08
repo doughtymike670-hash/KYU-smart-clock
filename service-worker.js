@@ -1,7 +1,7 @@
 // KYU Smart Class Clock — Service Worker
 // Caches every app file on install so the app works with zero network access.
 
-const CACHE_NAME = "kyu-clock-cache-v1";
+const CACHE_NAME = "kyu-clock-cache-v2";
 const CACHE_FILES = [
   "./",
   "./index.html",
