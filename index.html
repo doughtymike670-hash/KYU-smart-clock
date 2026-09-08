@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>KYU Smart Class Clock</title>
+<meta name="description" content="Offline class timetable, countdown clock, and alarm for KYU students." />
+<meta name="theme-color" content="#081422" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="assets/icon-192.png" />
+<link rel="apple-touch-icon" href="assets/icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===================== COURSE SELECT (first run) ===================== -->
+<section id="screen-course-select" class="screen course-select" hidden>
+  <div class="course-select-inner">
+    <div class="brand-mark" aria-hidden="true">🎓</div>
+    <h1>Which course are you on?</h1>
+    <p class="muted">Your timetable, alarms, and reminders will follow this selection. You can change it later in Settings.</p>
+    <div id="course-list" class="course-list"></div>
+  </div>
+</section>
+
+<!-- ===================== ALARM OVERLAY ===================== -->
+<div id="alarm-overlay" class="alarm-overlay" hidden>
+  <div class="alarm-card">
+    <div class="alarm-siren" aria-hidden="true">🔔</div>
+    <p id="alarm-lead" class="alarm-lead">CLASS ALERT</p>
+    <h2 id="alarm-headline">YOUR CLASS STARTS IN 15 MINUTES</h2>
+
+    <div class="alarm-ring-wrap">
+      <svg viewBox="0 0 120 120">
+        <circle class="alarm-ring-track" cx="60" cy="60" r="52" />
+        <circle id="alarm-ring-fill" class="alarm-ring-fill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="0" />
+      </svg>
+      <div class="alarm-ring-center">
+        <div id="alarm-ring-num" class="alarm-ring-num">15:00</div>
+        <div class="alarm-ring-unit">Minutes</div>
+      </div>
+    </div>
+
+    <p id="alarm-code" class="alarm-code">HES 2102</p>
+    <p id="alarm-unit" class="alarm-unit">Cell and Molecular Biology</p>
+    <p id="alarm-place" class="alarm-place">📍 JSM 104</p>
+    <p id="alarm-time" class="alarm-time">🕐 7:00 AM – 10:00 AM</p>
+    <div class="alarm-divider"></div>
+    <p class="alarm-note">Alarm will stop automatically.</p>
+    <button id="alarm-dismiss" class="btn btn-danger btn-block" style="background:var(--red);border-color:var(--red);color:#fff;">DISMISS</button>
+  </div>
+</div>
+
+<!-- ===================== MENU SHEET ===================== -->
+<div id="menu-sheet" class="menu-sheet" hidden>
+  <div class="menu-sheet-card">
+    <button class="menu-sheet-item" data-goto="screen-settings" data-close-menu>
+      <span class="menu-sheet-icon">⚙</span> Settings
+    </button>
+    <button class="menu-sheet-item" data-goto="screen-timetable" data-close-menu>
+      <span class="menu-sheet-icon">📅</span> Full timetable
+    </button>
+    <button class="menu-sheet-item" id="menu-theme-toggle">
+      <span class="menu-sheet-icon" id="menu-theme-icon">🌙</span> <span id="menu-theme-label">Dark mode</span>
+    </button>
+    <button class="menu-sheet-item" id="menu-close">
+      <span class="menu-sheet-icon">✕</span> Close
+    </button>
+  </div>
+</div>
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-badge" aria-hidden="true">🎓</div>
+    <div class="topbar-text">
+      <div class="topbar-title">KYU Smart Class Clock</div>
+      <div class="topbar-subtitle">Your time • Your classes • Your success</div>
+    </div>
+  </div>
+  <button id="menu-open" class="icon-btn" aria-label="Open menu" title="Menu">☰</button>
+</header>
+
+<main id="app-main" class="app-main">
+
+  <!-- ===================== HOME ===================== -->
+  <section id="screen-home" class="screen active">
+   <div class="home-col-main">
+
+    <div class="clock-card">
+      <div id="clock-time" class="clock-time">--:--:--</div>
+      <div id="clock-date" class="clock-date">Loading…</div>
+    </div>
+
+    <div id="status-banner" class="status-banner" hidden></div>
+
+    <div id="next-class-card" class="ticket-card next-card" hidden>
+      <div class="ticket-top-row">
+        <span class="ticket-eyebrow">NEXT CLASS</span>
+        <span id="next-type-badge" class="pill-badge">—</span>
+      </div>
+      <div class="ticket-name" id="next-name">—</div>
+      <div class="ticket-code" id="next-code">—</div>
+      <div class="ticket-meta-row">
+        <span id="next-place">—</span>
+      </div>
+      <div class="ticket-meta-row">
+        <span>🕐</span><strong id="next-day">—</strong><span id="next-time">—</span>
+      </div>
+      <div class="starts-in-block">
+        <div class="starts-in-label">Starts in</div>
+        <div id="next-countdown" class="starts-in-value">00:00:00</div>
+      </div>
+      <a id="next-join" class="btn btn-primary btn-block join-btn" href="#" hidden>JOIN CLASS</a>
+    </div>
+
+    <div id="current-class-card" class="ticket-card current-card" hidden>
+      <div class="ticket-top-row">
+        <span class="ticket-eyebrow live">🔴 CLASS IN PROGRESS</span>
+        <span id="current-type-badge" class="pill-badge">—</span>
+      </div>
+      <div class="ticket-name" id="current-name">—</div>
+      <div class="ticket-code" id="current-code">—</div>
+      <div class="ticket-meta-row">
+        <span id="current-place">—</span>
+      </div>
+      <div class="progress-label-row">
+        <span>Class Progress</span>
+        <span id="current-progress-pct">0%</span>
+      </div>
+      <div class="progress-track"><div id="current-progress" class="progress-fill"></div></div>
+      <div class="ends-in-row">
+        <span class="ends-in-label">Ends in:</span>
+        <span id="current-ends-in" class="ends-in-value">00:00:00</span>
+      </div>
+      <div class="tip-box">ℹ️ Keep the app open for reliable alarms. Battery-saving restrictions may affect background alarms.</div>
+      <a id="current-join" class="btn btn-primary btn-block join-btn" href="#" hidden>JOIN CLASS</a>
+    </div>
+
+    <section class="section-block">
+      <h2 class="section-heading" id="today-heading">Today's classes</h2>
+      <div id="today-list" class="today-list"></div>
+    </section>
+
+   </div>
+
+   <aside class="quick-settings-panel">
+      <div class="quick-settings-title">Quick Settings</div>
+      <div class="qs-row"><span class="qs-row-label">Clock Format</span><span id="qs-clock-format" class="qs-row-value">12-hour</span></div>
+      <div class="qs-row"><span class="qs-row-label">Pre-class Warning</span><span id="qs-warning" class="qs-row-value">15 minutes</span></div>
+      <div class="qs-row"><span class="qs-row-label">Alarm Duration</span><span id="qs-duration" class="qs-row-value">5 seconds</span></div>
+      <div class="qs-status"><span class="qs-status-dot"></span> Alarm monitoring active</div>
+   </aside>
+  </section>
+
+  <!-- ===================== TIMETABLE ===================== -->
+  <section id="screen-timetable" class="screen">
+    <h2 class="section-heading">Full week timetable</h2>
+    <div id="day-tabs" class="day-tabs"></div>
+    <div id="week-list" class="week-list"></div>
+    <button id="open-editor" class="btn btn-outline btn-block edit-timetable-btn">✎ Edit timetable</button>
+  </section>
+
+  <!-- ===================== ALARMS ===================== -->
+  <section id="screen-alarms" class="screen">
+    <h2 class="section-heading">Alarms</h2>
+
+    <div class="card">
+      <div class="row-between">
+        <div>
+          <div class="card-label">Pre-class warning</div>
+          <div id="alarms-warning-preview" class="card-value">15 minutes before</div>
+        </div>
+        <button class="btn btn-outline small" data-goto="screen-settings">Change</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row-between">
+        <div>
+          <div class="card-label">Alarm duration</div>
+          <div id="alarms-duration-preview" class="card-value">5 seconds</div>
+        </div>
+        <button class="btn btn-outline small" data-goto="screen-settings">Change</button>
+      </div>
+    </div>
+
+    <button id="test-alarm-btn" class="btn btn-primary btn-block">🔔 TEST ALARM</button>
+    <button id="test-notification-btn" class="btn btn-outline btn-block">TEST NOTIFICATION</button>
+
+    <h3 class="section-heading small">Upcoming alarms today</h3>
+    <div id="upcoming-alarms-list" class="today-list"></div>
+
+    <h3 class="section-heading small">Alarm history</h3>
+    <div id="alarm-history-list" class="today-list"></div>
+  </section>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <section id="screen-settings" class="screen">
+    <h2 class="section-heading">Settings</h2>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Course</div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <span class="settings-row-label">Course</span>
+          <select id="course-select" class="select settings-row-control"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Time &amp; Display</div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <span class="settings-row-label">Clock Format</span>
+          <select id="clock-format-select" class="select settings-row-control">
+            <option value="12">12-hour</option>
+            <option value="24">24-hour</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Dark Mode</span>
+          <label class="switch settings-row-control"><input type="checkbox" id="dark-mode-toggle" checked /><span class="switch-track"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Alarm Settings</div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <span class="settings-row-label">Pre-class Warning</span>
+          <select id="warning-select" class="select settings-row-control">
+            <option value="1">1 minute</option>
+            <option value="5">5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="15" selected>15 minutes</option>
+            <option value="20">20 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">60 minutes</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div id="warning-custom-wrap" class="settings-inline-custom" hidden>
+          <input id="warning-custom" class="text-input" type="number" min="1" placeholder="Custom minutes" />
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Alarm Duration</span>
+          <select id="duration-select" class="select settings-row-control">
+            <option value="2">2 seconds</option>
+            <option value="3">3 seconds</option>
+            <option value="5" selected>5 seconds</option>
+            <option value="10">10 seconds</option>
+            <option value="15">15 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div id="duration-custom-wrap" class="settings-inline-custom" hidden>
+          <input id="duration-custom" class="text-input" type="number" min="1" placeholder="Custom seconds" />
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Sound</span>
+          <label class="switch settings-row-control"><input type="checkbox" id="sound-toggle" checked /><span class="switch-track"></span></label>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Notifications</span>
+          <label class="switch settings-row-control"><input type="checkbox" id="notif-toggle" checked /><span class="switch-track"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Testing</div>
+      <div class="btn-row">
+        <button id="test-alarm-btn-2" class="btn btn-outline">TEST ALARM</button>
+        <button id="test-notification-btn-2" class="btn btn-outline">TEST NOTIFICATION</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Data &amp; Storage</div>
+      <div class="settings-group">
+        <button class="settings-row link-row" id="open-editor-2" style="width:100%;background:none;border:none;color:var(--text);cursor:pointer;">
+          <span class="settings-row-label">✎ Edit Timetable</span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+        <button class="settings-row link-row" id="open-backup-export" style="width:100%;background:none;border:none;color:var(--text);cursor:pointer;">
+          <span class="settings-row-label">⬆ Export Timetable</span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+        <button class="settings-row link-row" id="open-backup-import" style="width:100%;background:none;border:none;color:var(--text);cursor:pointer;">
+          <span class="settings-row-label">⬇ Import Timetable</span>
+          <span class="settings-row-chevron">›</span>
+        </button>
+      </div>
+    </div>
+
+    <button id="reset-settings-btn" class="btn btn-danger btn-block">RESET SETTINGS</button>
+
+    <p class="fine-print warn">⚠ For reliable alarms, keep the app installed and allow notifications/sound permissions. Battery-saving restrictions may affect background alarms.</p>
+    <p class="fine-print">Works fully offline. Uses your device's local time.</p>
+  </section>
+
+  <!-- ===================== BACKUP & RESTORE ===================== -->
+  <section id="screen-backup" class="screen">
+    <div class="row-between">
+      <h2 class="section-heading no-margin">Backup &amp; Restore</h2>
+      <button id="backup-close" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+
+    <div class="backup-card">
+      <div class="backup-card-title">⬇ Export Timetable</div>
+      <div class="backup-card-desc">Save your timetable and settings to a JSON file, so you can restore them later or move to a new device.</div>
+      <button id="export-btn" class="btn btn-green btn-block">⬇ EXPORT TIMETABLE</button>
+    </div>
+
+    <div class="backup-card">
+      <div class="backup-card-title">⬆ Import Timetable</div>
+      <div class="backup-card-desc">Load a previously saved timetable and settings from a JSON file. This will replace your current timetable for this course.</div>
+      <button id="import-btn" class="btn btn-primary btn-block">⬆ IMPORT TIMETABLE</button>
+      <input type="file" id="import-file" accept="application/json" hidden />
+    </div>
+  </section>
+
+  <!-- ===================== EDITOR ===================== -->
+  <section id="screen-editor" class="screen">
+    <div class="row-between">
+      <h2 class="section-heading no-margin">Edit timetable</h2>
+      <button id="editor-close" class="icon-btn" aria-label="Close editor">✕</button>
+    </div>
+
+    <button id="editor-add-btn" class="btn btn-primary btn-block">+ ADD CLASS</button>
+    <div id="editor-list" class="today-list"></div>
+  </section>
+
+  <!-- ===================== CLASS FORM (add/edit) ===================== -->
+  <section id="screen-class-form" class="screen">
+    <div class="row-between">
+      <h2 class="section-heading no-margin" id="class-form-title">Add class</h2>
+      <button id="class-form-close" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+
+    <form id="class-form">
+      <label class="field-label" for="f-day">Day</label>
+      <select id="f-day" class="select" required>
+        <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+        <option>Thursday</option><option>Friday</option>
+      </select>
+
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <label class="field-label" for="f-start">Start Time</label>
+          <input id="f-start" class="text-input" type="time" required />
+        </div>
+        <div style="flex:1;">
+          <label class="field-label" for="f-end">End Time</label>
+          <input id="f-end" class="text-input" type="time" required />
+        </div>
+      </div>
+
+      <label class="field-label" for="f-code">Unit Code</label>
+      <input id="f-code" class="text-input" type="text" placeholder="e.g. HES 2102" required />
+
+      <label class="field-label" for="f-name">Unit Name</label>
+      <input id="f-name" class="text-input" type="text" placeholder="e.g. Cell and Molecular Biology" required />
+
+      <div id="f-venue-wrap">
+        <label class="field-label" for="f-venue">Venue</label>
+        <input id="f-venue" class="text-input" type="text" placeholder="e.g. JSM 104" />
+      </div>
+
+      <div id="f-link-wrap" hidden>
+        <label class="field-label" for="f-link">Meeting link (optional)</label>
+        <input id="f-link" class="text-input" type="url" placeholder="https://…" />
+      </div>
+
+      <label class="field-label" for="f-lecturer">Lecturer</label>
+      <input id="f-lecturer" class="text-input" type="text" placeholder="e.g. Prof. Laura Wangai" />
+
+      <label class="field-label">Class Type</label>
+      <select id="f-type" class="select" hidden>
+        <option value="PHYSICAL">Physical</option>
+        <option value="VIRTUAL">Virtual</option>
+      </select>
+      <div class="segmented" id="f-type-segmented">
+        <button type="button" class="segmented-btn physical active" data-type="PHYSICAL">🏫 Physical</button>
+        <button type="button" class="segmented-btn virtual" data-type="VIRTUAL">💻 Virtual</button>
+      </div>
+
+      <input type="hidden" id="f-id" />
+
+      <div class="btn-row">
+        <button type="button" id="f-cancel" class="btn btn-outline">CANCEL</button>
+        <button type="submit" class="btn btn-primary">SAVE</button>
+      </div>
+      <button type="button" id="f-delete" class="btn btn-danger btn-block" hidden>DELETE CLASS</button>
+    </form>
+  </section>
+
+</main>
+
+<!-- ===================== BOTTOM NAV / SIDEBAR ===================== -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-screen="screen-home"><span class="nav-icon">🏠</span><span>Home</span></button>
+  <button class="nav-btn" data-screen="screen-timetable"><span class="nav-icon">📅</span><span>Timetable</span></button>
+  <button class="nav-btn" data-screen="screen-alarms"><span class="nav-icon">🔔</span><span>Alarms</span></button>
+  <button class="nav-btn" data-screen="screen-settings"><span class="nav-icon">⚙</span><span>Settings</span></button>
+</nav>
+
+<audio id="alarm-audio" src="assets/alarm.wav" preload="auto"></audio>
+
+<script src="script.js"></script>
+</body>
+</html>
