@@ -1,0 +1,15 @@
+{
+  "name": "KYU Smart Class Clock",
+  "short_name": "KYU Clock",
+  "description": "Offline class timetable, countdown clock, and alarm for KYU students.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F1A2B",
+  "theme_color": "#0F1A2B",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
